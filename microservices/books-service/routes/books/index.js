@@ -2,6 +2,12 @@ const express = require("express"); // importa Express
 const router = express.Router(); // crea un nuevo enrutador de Express
 const data = require("../../data/data-library"); // importa los datos de data-library
 
+const axios = require("axios"); 
+
+const rutaautores= "http://authors:3000/api/v2/authors";
+const rutalibros = "http://books:4000/api/v2/books";
+
+
 const logger = (message) => console.log(`Author Services: ${message}`);
 
 // define un controlador para la ruta raíz ("/")
@@ -33,8 +39,6 @@ router.get("/title/:title", (req, res) => {
   return res.send(response); // devuelve la respuesta al cliente
 });
 //00000000000000000000000000000000000000000000000000000000000000000000000000000
-
-//Listar los libros escritos por autor por nombre
 
 
 //000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -105,17 +109,64 @@ router.get("/librosabuscarhasta/:fecha", (req, res) => {
 
 //Punto 4 buscar libros igual 1900
 router.get("/librosabuscarigual/:fecha", (req, res) => {
-  const books = data.dataLibrary.books.filter((book) => {
+  const libros = data.dataLibrary.books.filter((book) => {
     return book.year == req.params.fecha;
   });
   const response = {
     service: "books",
     architecture: "microservices",
-    length: books.length,
-    data: books,
+    length: libros.length,
+    data: libros,
   };
   return res.send(response); // devuelve la respuesta al cliente
 });
+
+//00000000000000000000000000000000000000000000000000000000000000000000000000000
+// Libros a buscar por nombre
+router.get("/librosabuscarnombre/:autornombre", async (req, res) => {
+  const autornombre = req.params.autornombre;
+  let autorid;
+  try {
+    const autor= await axios.get(`${rutaautores}/author/${autornombre}`);
+    autorid = autor.data.data[0].id;
+    const listalibros= await axios.get(`${rutalibros}/librosabuscarautorid/${autorid}`);
+    const response = {
+      service: "books",
+      architecture: "microservices",
+      length: listalibros.data.length,
+      data: listalibros.data,
+
+    }
+    return res.send(response);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send("holi");
+  }
+})
+
+//00000000000000000000000000000000
+//encontrar la distribucion de libros
+router.get("/distribucion/:pais", (req, res) => {
+  const nombrepais = req.params.pais;
+  let listalibros = [];
+  data.dataLibrary.books.forEach(book => {
+    const pais = book.distributedCountries.find(pais => pais === nombrepais)
+    
+    if (pais !== undefined) {
+      listalibros.push(book.title);
+    }
+  })
+  const response = {
+    service: "books",
+    architecture: "microservices",
+    length: listalibros.length,
+    data: {
+      books: listalibros,
+    },
+  }
+
+  return res.send(response);
+}) 
 
 module.exports = router; // exporta el enrutador de Express para su uso en otras partes de la aplicación
 
